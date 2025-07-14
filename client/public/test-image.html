@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IPFS Image Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-container { margin: 20px 0; padding: 20px; border: 1px solid #ccc; }
+        img { max-width: 100%; height: auto; border: 2px solid #ddd; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>IPFS Image Loading Test</h1>
+    
+    <div class="test-container">
+        <h3>Test 1: Direct IPFS URL</h3>
+        <div id="status1" class="status">Loading...</div>
+        <img id="img1" 
+             src="https://gateway.pinata.cloud/ipfs/QmevRS9gjEyknE9bVCR2oCc8XxRSCLKJSQfMoD1chQ5Mcj" 
+             alt="Pop Art Bedroom"
+             crossorigin="anonymous">
+    </div>
+    
+    <div class="test-container">
+        <h3>Test 2: Server Proxy URL</h3>
+        <div id="status2" class="status">Loading...</div>
+        <img id="img2" 
+             src="/api/backgrounds/image/83" 
+             alt="Pop Art Bedroom Proxy"
+             crossorigin="anonymous">
+    </div>
+    
+    <div class="test-container">
+        <h3>Test 3: Alternative IPFS Gateway</h3>
+        <div id="status3" class="status">Loading...</div>
+        <img id="img3" 
+             src="https://ipfs.io/ipfs/QmevRS9gjEyknE9bVCR2oCc8XxRSCLKJSQfMoD1chQ5Mcj" 
+             alt="Pop Art Bedroom Alt"
+             crossorigin="anonymous">
+    </div>
+
+    <script>
+        function setupImageTest(imgId, statusId) {
+            const img = document.getElementById(imgId);
+            const status = document.getElementById(statusId);
+            
+            img.onload = function() {
+                status.className = 'status success';
+                status.textContent = `✓ Loaded successfully (${this.naturalWidth}x${this.naturalHeight})`;
+            };
+            
+            img.onerror = function() {
+                status.className = 'status error';
+                status.textContent = '✗ Failed to load image';
+            };
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (status.textContent === 'Loading...') {
+                    status.className = 'status error';
+                    status.textContent = '✗ Timeout - taking too long to load';
+                }
+            }, 10000);
+        }
+        
+        setupImageTest('img1', 'status1');
+        setupImageTest('img2', 'status2');
+        setupImageTest('img3', 'status3');
+    </script>
+</body>
+</html>
