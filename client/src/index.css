@@ -1,0 +1,308 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar styles */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(156, 163, 175, 0.2);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.5);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.7);
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --primary: 262 83% 76%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 160 84% 39%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 339 81% 66%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 262 83% 76%;
+  --radius: 1rem;
+
+  --chart-1: 262 83% 76%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 339 81% 66%;
+  --chart-4: 217 91% 60%;
+  --chart-5: 35 91% 61%;
+  
+  --sidebar-background: 224 71% 4%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-primary: 262 83% 76%;
+  --sidebar-primary-foreground: 210 40% 98%;
+  --sidebar-accent: 339 81% 66%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 215 27% 17%;
+  --sidebar-ring: 262 83% 76%;
+  
+  --surface: 217 33% 17%;
+  --surface-dark: 222 47% 10%;
+  --surface-light: 215 27% 27%;
+  
+  --background-dark: 224 71% 4%;
+  --background-light: 215 27% 18%;
+}
+
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --popover: 222 47% 11%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --primary: 262 83% 76%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 160 84% 39%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 339 81% 66%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --ring: 262 83% 76%;
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased text-foreground;
+    background: linear-gradient(135deg, 
+      hsl(262, 83%, 6%) 0%,
+      hsl(224, 71%, 4%) 25%,
+      hsl(222, 47%, 8%) 50%,
+      hsl(220, 40%, 10%) 75%,
+      hsl(222, 47%, 11%) 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+/* Custom Styles */
+@font-face {
+  font-family: 'Inter';
+  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+}
+
+@font-face {
+  font-family: 'Outfit';
+  src: url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-lg;
+    background-color: hsl(var(--surface) / 0.4);
+    border: 1px solid hsl(var(--border) / 0.1);
+    box-shadow: 
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(139, 92, 246, 0.05);
+  }
+
+  .glass-card:hover {
+    background-color: hsl(var(--surface) / 0.5);
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(139, 92, 246, 0.08);
+    transition: all 0.2s ease;
+  }
+
+  /* Modal input field styling - same dark background as main inputs */
+  .modal-input {
+    background-color: hsl(var(--input)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .modal-input:focus {
+    background-color: hsl(var(--input)) !important;
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+  }
+
+  /* Select Trigger Elements - Only for select dropdowns */
+  .modal-toggle,
+  [data-radix-select-trigger],
+  button[role="combobox"][aria-haspopup="listbox"] {
+    background-color: hsl(var(--input)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .modal-toggle:focus,
+  [data-radix-select-trigger]:focus,
+  button[role="combobox"][aria-haspopup="listbox"]:focus {
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+  }
+
+  /* Switch Active/Checked State - Only for actual switches */
+  [data-radix-switch-root][data-state="checked"],
+  .modal-toggle[data-state="checked"]:not(button),
+  button[role="switch"][data-state="checked"] {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  /* Switch Active State Focus */
+  [data-radix-switch-root][data-state="checked"]:focus,
+  .modal-toggle[data-state="checked"]:not(button):focus,
+  button[role="switch"][data-state="checked"]:focus {
+    background-color: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3) !important;
+  }
+
+  .shadow-glow {
+    box-shadow: 
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(139, 92, 246, 0.05);
+  }
+
+  .shadow-glow-sm {
+    box-shadow: 
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06),
+      0 0 0 1px rgba(139, 92, 246, 0.03);
+  }
+
+  .shadow-glow-md {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(139, 92, 246, 0.06);
+  }
+
+  .animated-gradient {
+    background: linear-gradient(270deg, hsl(262, 83%, 76%), hsl(171, 77%, 64%), hsl(339, 81%, 66%));
+    background-size: 600% 600%;
+    animation: gradient-shift 8s ease infinite;
+  }
+
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, hsl(262, 83%, 76%), hsl(171, 77%, 64%), hsl(339, 81%, 66%));
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.7;
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rounded-4xl {
+  border-radius: 2rem;
+}
+
+.rounded-3xl {
+  border-radius: 1.5rem;
+}
+
+/* Input Field Styling - Only for actual input elements */
+input[type="text"],
+input[type="email"], 
+input[type="password"],
+input[type="search"],
+input[type="number"],
+textarea,
+.modal-input {
+  background-color: hsl(var(--input)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+  transition: all 0.2s ease !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus, 
+input[type="search"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+.modal-input:focus {
+  background-color: hsl(var(--input)) !important;
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2) !important;
+  outline: none !important;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 0.9 !important;
+}
+
+/* Fix specific background classes */
+.bg-surface {
+  background: rgba(67, 56, 202, 0.1) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+.bg-surface\/50 {
+  background: rgba(67, 56, 202, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.25) !important;
+}
+
+.border-surface {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}

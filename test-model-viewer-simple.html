@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Model Viewer Test</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial; }
+        .test-container { margin: 20px 0; }
+        model-viewer { width: 300px; height: 300px; border: 1px solid #ccc; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loading { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>Model Viewer GLB Loading Test</h1>
+    
+    <div class="test-container">
+        <h2>Test 1: Minimal Triangle GLB</h2>
+        <div id="status1" class="status loading">Loading...</div>
+        <model-viewer id="model1" 
+                      src="/temp/avatars/minimal-test.glb" 
+                      alt="Minimal test model"
+                      camera-controls 
+                      auto-rotate
+                      environment-image="neutral">
+        </model-viewer>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test 2: Generated Avatar GLB</h2>
+        <div id="status2" class="status loading">Loading...</div>
+        <model-viewer id="model2" 
+                      src="/temp/avatars/temp_2d3d_1752033366753_8b97c730-73bf-4073-82dc-b8ef84e26009.glb" 
+                      alt="Generated avatar model"
+                      camera-controls 
+                      auto-rotate
+                      environment-image="neutral">
+        </model-viewer>
+    </div>
+    
+    <script>
+        function setupModelViewer(id, statusId) {
+            const model = document.getElementById(id);
+            const status = document.getElementById(statusId);
+            
+            model.addEventListener('load', () => {
+                status.textContent = 'SUCCESS: Model loaded successfully';
+                status.className = 'status success';
+                console.log(id + ' loaded successfully');
+            });
+            
+            model.addEventListener('error', (e) => {
+                status.textContent = 'ERROR: Model failed to load - ' + (e.detail?.message || 'Unknown error');
+                status.className = 'status error';
+                console.error(id + ' failed to load:', e);
+            });
+            
+            // Timeout fallback
+            setTimeout(() => {
+                if (status.textContent === 'Loading...') {
+                    status.textContent = 'TIMEOUT: Model loading timed out';
+                    status.className = 'status error';
+                }
+            }, 10000);
+        }
+        
+        setupModelViewer('model1', 'status1');
+        setupModelViewer('model2', 'status2');
+    </script>
+</body>
+</html>

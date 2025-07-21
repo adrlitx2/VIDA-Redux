@@ -1,0 +1,21 @@
+Debug Log Analysis:
+
+1. Session Status:
+- There appears to be an active session for user "adam@lithtoken.io"
+- The session expires at timestamp 1748041484 (about 1 hour from login time)
+- The session has a valid JWT token
+
+2. Error Types:
+- "Warning: validateDOMNesting": This warning is related to React's DOM nesting rules (likely a <a> inside another <a> tag)
+- "Error loading avatars": Failing to fetch avatar data from backend
+- "Error fetching stream time": Failing to fetch streaming time data from backend
+
+3. Login Issues:
+- Initial login attempts show "invalid_credentials" errors
+- Session appears active after successful login but UI doesn't update correctly
+- Backend data fetching fails even with valid authentication
+
+4. Connection Flow:
+- The frontend connects to Supabase auth successfully
+- Session verification works (getSession returns valid data)
+- But backend API calls are failing to use the authenticated session
