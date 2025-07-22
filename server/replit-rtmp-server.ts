@@ -19,6 +19,9 @@ interface RTMPStream {
 export class ReplitRTMPServer {
   private wss: WebSocketServer;
   private activeStreams: Map<string, RTMPStream> = new Map();
+  private reconnectAttempts: Map<string, number> = new Map();
+  private maxReconnectAttempts = 3;
+  private reconnectDelay = 5000; // 5 seconds
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 
@@ -104,11 +107,16 @@ export class ReplitRTMPServer {
       ffmpegProcess.on('error', (error) => {
         console.error(`❌ WebRTC FFmpeg error for stream ${streamId}:`, error);
         stream.status = 'error';
+        
+        // Attempt automatic recovery
+        this.attemptStreamRecovery(streamId, ws, message);
+        
         try {
           ws.send(JSON.stringify({
             type: 'webrtc-stream-error',
             streamId,
-            error: error.message
+            error: error.message,
+            recovering: true
           }));
         } catch (wsError) {
           console.error('Failed to send error message via WebSocket:', wsError);
@@ -239,32 +247,8 @@ export class ReplitRTMPServer {
 
     console.log(`🛑 Stopping WebRTC stream ${streamId}`);
 
-    if (stream.ffmpegProcess) {
-      try {
-        // Close stdin gracefully
-        stream.ffmpegProcess.stdin?.end();
-        
-        // Give FFmpeg time to flush, then terminate
-        setTimeout(() => {
-          if (stream.ffmpegProcess && !stream.ffmpegProcess.killed) {
-            stream.ffmpegProcess.kill('SIGTERM');
-            
-            // Force kill if it doesn't respond
-            setTimeout(() => {
-              if (stream.ffmpegProcess && !stream.ffmpegProcess.killed) {
-                stream.ffmpegProcess.kill('SIGKILL');
-              }
-            }, 3000);
-          }
-        }, 1000);
-        
-        stream.status = 'stopped';
-      } catch (error) {
-        console.error(`Error stopping WebRTC stream ${streamId}:`, error);
-      }
-    }
-
-    this.activeStreams.delete(streamId);
+    // Use the enhanced cleanup method
+    this.cleanupStream(streamId);
     
     ws.send(JSON.stringify({
       type: 'webrtc-stream-stopped',
@@ -272,7 +256,10 @@ export class ReplitRTMPServer {
       status: 'stopped'
     }));
 
-    console.log(`🛑 WebRTC stream ${streamId} stopped with improved cleanup`);
+    console.log(`🛑 WebRTC stream ${streamId} stopped with enhanced cleanup`);
+    
+    // Log stream health after cleanup
+    this.logStreamHealth();
   }
 
   private async detectPreferredCodec(rtmpUrl: string, streamKey: string): Promise<'h264' | 'avc'> {
@@ -463,6 +450,79 @@ export class ReplitRTMPServer {
     };
     
     return settings[userPlan as keyof typeof settings] || settings.free;
+  }
+
+  // Enhanced error handling and recovery methods
+  private async attemptStreamRecovery(streamId: string, ws: any, originalMessage: any) {
+    const attempts = this.reconnectAttempts.get(streamId) || 0;
+    
+    if (attempts >= this.maxReconnectAttempts) {
+      console.error(`❌ Max reconnection attempts reached for stream ${streamId}`);
+      ws.send(JSON.stringify({
+        type: 'webrtc-stream-error',
+        streamId,
+        error: 'Max reconnection attempts reached. Please restart the stream.'
+      }));
+      this.activeStreams.delete(streamId);
+      this.reconnectAttempts.delete(streamId);
+      return;
+    }
+
+    console.log(`🔄 Attempting stream recovery for ${streamId} (attempt ${attempts + 1}/${this.maxReconnectAttempts})`);
+    this.reconnectAttempts.set(streamId, attempts + 1);
+
+    try {
+      // Wait before attempting reconnection
+      await new Promise(resolve => setTimeout(resolve, this.reconnectDelay));
+      
+      // Attempt to restart the stream
+      await this.startWebRTCStream(ws, originalMessage);
+      
+      console.log(`✅ Stream recovery successful for ${streamId}`);
+      this.reconnectAttempts.delete(streamId);
+    } catch (error) {
+      console.error(`❌ Stream recovery failed for ${streamId}:`, error);
+      
+      // Schedule next recovery attempt
+      setTimeout(() => {
+        this.attemptStreamRecovery(streamId, ws, originalMessage);
+      }, this.reconnectDelay);
+    }
+  }
+
+  private cleanupStream(streamId: string) {
+    const stream = this.activeStreams.get(streamId);
+    if (stream) {
+      console.log(`🧹 Cleaning up stream ${streamId}`);
+      
+      // Kill FFmpeg process if it exists
+      if (stream.ffmpegProcess && !stream.ffmpegProcess.killed) {
+        try {
+          stream.ffmpegProcess.kill('SIGTERM');
+          setTimeout(() => {
+            if (stream.ffmpegProcess && !stream.ffmpegProcess.killed) {
+              stream.ffmpegProcess.kill('SIGKILL');
+            }
+          }, 3000);
+        } catch (error) {
+          console.error(`Error killing FFmpeg process for stream ${streamId}:`, error);
+        }
+      }
+      
+      this.activeStreams.delete(streamId);
+      this.reconnectAttempts.delete(streamId);
+    }
+  }
+
+  private logStreamHealth() {
+    const activeCount = this.activeStreams.size;
+    const reconnectCount = this.reconnectAttempts.size;
+    
+    console.log(`📊 Stream Health: ${activeCount} active streams, ${reconnectCount} reconnecting`);
+    
+    this.activeStreams.forEach((stream, id) => {
+      console.log(`  - Stream ${id}: ${stream.status} (${stream.rtmpUrl})`);
+    });
   }
 }
 

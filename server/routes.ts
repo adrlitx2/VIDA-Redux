@@ -20,6 +20,8 @@ import { eq, sql } from "drizzle-orm";
 import { glbThumbnailGenerator } from "./services/glb-thumbnail-generator";
 import { tempFileCleanup } from "./services/temp-file-cleanup";
 import { poseNormalizationService } from "./services/pose-normalization-service";
+import { setupReplitRTMPServer } from "./replit-rtmp-server";
+import { setupMediaServer } from "./media-server";
 import sharp from "sharp";
 
 // GLB file analysis function
@@ -2920,6 +2922,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(path.join(process.cwd(), "test-model-viewer-simple.html"));
   });
 
+  // Streaming API endpoints
+  app.post("/api/stream/start", async (req, res) => {
+    try {
+      const { rtmpUrl, streamKey, quality = '1080p', bitrate = 9000 } = req.body;
+      
+      // Basic validation
+      if (!rtmpUrl || !streamKey) {
+        return res.status(400).json({
+          error: 'Missing required parameters',
+          message: 'RTMP URL and stream key are required'
+        });
+      }
+      
+      // Generate unique stream ID
+      const streamId = `stream_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      res.json({
+        success: true,
+        streamId,
+        message: 'Stream ready to start',
+        config: {
+          rtmpUrl,
+          quality,
+          bitrate
+        }
+      });
+    } catch (error) {
+      console.error('Stream start error:', error);
+      res.status(500).json({
+        error: 'Stream start failed',
+        message: 'Failed to initialize stream'
+      });
+    }
+  });
+
+  app.post("/api/stream/stop", async (req, res) => {
+    try {
+      const { streamId } = req.body;
+      
+      if (!streamId) {
+        return res.status(400).json({
+          error: 'Missing stream ID',
+          message: 'Stream ID is required'
+        });
+      }
+      
+      res.json({
+        success: true,
+        message: 'Stream stop request received',
+        streamId
+      });
+    } catch (error) {
+      console.error('Stream stop error:', error);
+      res.status(500).json({
+        error: 'Stream stop failed',
+        message: 'Failed to stop stream'
+      });
+    }
+  });
+
+  app.get("/api/stream/status", async (req, res) => {
+    try {
+      const { streamId } = req.query;
+      
+      if (!streamId) {
+        return res.status(400).json({
+          error: 'Missing stream ID',
+          message: 'Stream ID is required'
+        });
+      }
+      
+      // Mock status response - in production this would check actual stream status
+      res.json({
+        streamId,
+        status: 'live',
+        uptime: Math.floor(Math.random() * 3600), // Random uptime in seconds
+        viewers: Math.floor(Math.random() * 100),
+        quality: '1080p',
+        bitrate: 9000
+      });
+    } catch (error) {
+      console.error('Stream status error:', error);
+      res.status(500).json({
+        error: 'Status check failed',
+        message: 'Failed to get stream status'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // Initialize streaming servers
+  try {
+    console.log('🎬 Initializing VIDA³ streaming servers...');
+    
+    // Initialize Replit RTMP Server for WebRTC-to-RTMP streaming
+    const rtmpServer = setupReplitRTMPServer(httpServer);
+    console.log('✅ Replit RTMP Server initialized on /rtmp-relay');
+    
+    // Initialize Media Server for additional streaming capabilities
+    const mediaServer = setupMediaServer(httpServer);
+    console.log('✅ Media Server initialized on /media-relay');
+    
+    console.log('🎯 VIDA³ streaming infrastructure ready');
+  } catch (error) {
+    console.error('❌ Failed to initialize streaming servers:', error);
+    // Don't crash the server, but log the error
+  }
+  
   return httpServer;
 }
