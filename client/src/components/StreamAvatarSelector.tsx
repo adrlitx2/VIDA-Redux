@@ -18,6 +18,13 @@ interface StreamAvatarSelectorProps {
   onAvatarSelect: (avatar: Avatar | PresetAvatar, type: 'user' | 'preset') => void;
   userPlan?: string;
   className?: string;
+  // Pass avatars data from parent to avoid duplicate queries
+  userAvatars?: Avatar[];
+  presetAvatars?: PresetAvatar[];
+  categories?: any[];
+  isLoadingUserAvatars?: boolean;
+  isLoadingPresets?: boolean;
+  isLoadingCategories?: boolean;
 }
 
 export function StreamAvatarSelector({ 
@@ -25,28 +32,26 @@ export function StreamAvatarSelector({
   selectedAvatarType,
   onAvatarSelect,
   userPlan = 'free',
-  className 
+  className,
+  userAvatars: userAvatarsProp = [],
+  presetAvatars: presetAvatarsProp = [],
+  categories: categoriesProp = [],
+  isLoadingUserAvatars = false,
+  isLoadingPresets = false,
+  isLoadingCategories = false
 }: StreamAvatarSelectorProps) {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>('');
 
-  // Fetch user avatars
-  const { data: userAvatars = [], isLoading: loadingUserAvatars } = useQuery({
-    queryKey: ['/api/avatars'],
-    refetchOnWindowFocus: false
-  });
-
-  // Fetch preset avatars based on user plan
-  const { data: presetAvatars = [], isLoading: loadingPresets } = useQuery({
-    queryKey: ['/api/avatars/presets', selectedCategory, userPlan],
-    refetchOnWindowFocus: false
-  });
-
-  // Fetch avatar categories
-  const { data: categories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['/api/avatars/categories'],
-    refetchOnWindowFocus: false
-  });
+  // Use props instead of duplicate queries - data comes from parent
+  const loadingUserAvatars = isLoadingUserAvatars;
+  const loadingPresets = isLoadingPresets;
+  const loadingCategories = isLoadingCategories;
+  
+  // Use the prop data
+  const userAvatars = userAvatarsProp;
+  const presetAvatars = presetAvatarsProp;
+  const categories = categoriesProp;
 
   // Track avatar usage
   const trackUsageMutation = useMutation({

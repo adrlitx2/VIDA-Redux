@@ -1,16 +1,20 @@
+// Admin features require a Supabase service key (SUPABASE_SERVICE_KEY) in your environment.
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ewvbjadosmwgtntdmpog.supabase.co';
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV3dmJqYWRvc213Z3RudGRtcG9nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzk2Nzc0NiwiZXhwIjoyMDYzNTQzNzQ2fQ.vim2vDWpjm4D83o7hFetIfUAC_Z14DlYOKW1588YIHo';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-// Create Supabase client with admin privileges
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
+// Only create the admin client if the service key is present
+export const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null;
+
+// (The rest of your admin code can check if supabaseAdmin is null and handle accordingly)
 
 /**
  * Set the role for a user in Supabase
@@ -30,7 +34,7 @@ export async function setUserRole(userId: string, role: 'admin' | 'superadmin' |
     }
     
     // Get the current user to verify they exist
-    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const { data: userData, error: userError } = await supabaseAdmin?.auth.admin.getUserById(userId);
     
     if (userError || !userData.user) {
       console.error('Error getting user:', userError);
@@ -38,7 +42,7 @@ export async function setUserRole(userId: string, role: 'admin' | 'superadmin' |
     }
     
     // Set the role in app_metadata
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(
+    const { error } = await supabaseAdmin?.auth.admin.updateUserById(
       userId,
       { 
         app_metadata: { 
@@ -66,7 +70,7 @@ export async function setUserRole(userId: string, role: 'admin' | 'superadmin' |
  */
 export async function getAllUsersWithRoles(): Promise<any[]> {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data, error } = await supabaseAdmin?.auth.admin.listUsers();
     
     if (error) {
       console.error('Error listing users:', error);
@@ -109,7 +113,7 @@ function getUserRoleFromMetadata(user: any): string {
 export async function ensureSuperAdminExists(email: string, password: string, username: string): Promise<{ success: boolean; userId?: string; error?: any }> {
   try {
     // Check if user already exists
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data, error } = await supabaseAdmin?.auth.admin.listUsers();
     
     if (error) {
       return { success: false, error };
@@ -129,7 +133,7 @@ export async function ensureSuperAdminExists(email: string, password: string, us
     
     if (existingUser) {
       // User exists, promote to superadmin
-      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      const { error: updateError } = await supabaseAdmin?.auth.admin.updateUserById(
         existingUser.id, 
         { app_metadata: { roles: ['superadmin'] } }
       );
@@ -143,7 +147,7 @@ export async function ensureSuperAdminExists(email: string, password: string, us
     }
     
     // Create new user
-    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    const { data: newUser, error: createError } = await supabaseAdmin?.auth.admin.createUser({
       email,
       password,
       email_confirm: true,

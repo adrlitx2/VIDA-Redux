@@ -1,5 +1,16 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+
+// Global type declarations
+declare global {
+  var coStreamConnections: Map<string, Map<string, {
+    ws: any;
+    userId: string;
+    username: string;
+    sessionId: string;
+    isHost: boolean;
+  }>>;
+}
 import session from "express-session";
 import MemoryStore from "memorystore";
 import connectPgSimple from "connect-pg-simple";
@@ -23,6 +34,9 @@ import { poseNormalizationService } from "./services/pose-normalization-service"
 import { setupReplitRTMPServer } from "./replit-rtmp-server";
 import { setupMediaServer } from "./media-server";
 import sharp from "sharp";
+import buddySystemRoutes from "./routes/buddy-system";
+import adminUsersRoutes from "./routes/admin-users";
+import userSearchRoutes from "./routes/user-search";
 
 // GLB file analysis function
 function analyzeGLBFile(buffer: Buffer) {
@@ -143,8 +157,8 @@ function analyzeGLBFile(buffer: Buffer) {
 
 // Create supabaseAdmin client for admin operations
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role key for admin
 );
 
 // Import and set up routes
@@ -173,7 +187,7 @@ function createSessionStore() {
   }
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, wsInstance?: any, io?: any): Promise<Server> {
   // Test upload endpoint - MUST be first to bypass all middleware
   const upload = multer({ 
     dest: 'temp/',
@@ -356,6 +370,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Auth routes
   app.use("/api/auth", authRoutes);
+
+  // Buddy system and co-streaming routes
+  app.use("/api/buddy-system", buddySystemRoutes(io));
+
+           // Co-streaming WebSocket endpoint
+         if (wsInstance) {
+           app.ws('/api/buddy-system/co-stream/:sessionId', async (ws: any, req: any) => {
+             try {
+               const { sessionId } = req.params;
+               console.log(`🎯 Co-stream WebSocket connection for session ${sessionId}`);
+
+               // Store WebSocket connection in a global map (in production, use Redis)
+               if (!global.coStreamConnections) {
+                 global.coStreamConnections = new Map();
+               }
+
+               if (!global.coStreamConnections.has(sessionId)) {
+                 global.coStreamConnections.set(sessionId, new Map());
+               }
+
+               const sessionConnections = global.coStreamConnections.get(sessionId);
+
+               ws.on('message', async (message: string) => {
+                 try {
+                   const data = JSON.parse(message);
+                   console.log(`🎯 Co-stream message:`, data);
+
+                   switch (data.type) {
+                     case 'join-session':
+                       // Store user connection
+                       sessionConnections.set(data.userId, {
+                         ws,
+                         userId: data.userId,
+                         username: data.username,
+                         sessionId: sessionId,
+                         isHost: data.isHost || false
+                       });
+
+                       // Notify other participants
+                       broadcastToSession(sessionId, {
+                         type: 'participant-joined',
+                         participant: {
+                           user_id: data.userId,
+                           username: data.username,
+                           is_host: data.isHost || false,
+                           is_active: true
+                         }
+                       }, data.userId);
+                       break;
+
+                     case 'participant-frame':
+                       // Send frame to host only (host will combine all frames)
+                       const hostConnection = Array.from(sessionConnections.values())
+                         .find(conn => conn.isHost);
+                       
+                       if (hostConnection && hostConnection.ws.readyState === 1) {
+                         hostConnection.ws.send(JSON.stringify({
+                           type: 'participant-frame',
+                           userId: data.userId,
+                           username: data.username,
+                           frameData: data.frameData
+                         }));
+                       }
+                       break;
+
+                     case 'leave-session':
+                       // Remove user connection
+                       sessionConnections.delete(data.userId);
+
+                       // Notify other participants
+                       broadcastToSession(sessionId, {
+                         type: 'participant-left',
+                         userId: data.userId
+                       }, data.userId);
+                       break;
+
+                     default:
+                       console.log(`🎯 Unknown co-stream message type: ${data.type}`);
+                   }
+                 } catch (error) {
+                   console.error('Error handling co-stream message:', error);
+                 }
+               });
+
+               ws.on('close', () => {
+                 console.log(`🎯 Co-stream WebSocket closed for session ${sessionId}`);
+                 // Clean up connection
+                 for (const [userId, connection] of sessionConnections.entries()) {
+                   if (connection.ws === ws) {
+                     sessionConnections.delete(userId);
+                     broadcastToSession(sessionId, {
+                       type: 'participant-left',
+                       userId: userId
+                     }, userId);
+                     break;
+                   }
+                 }
+               });
+
+               ws.on('error', (error: any) => {
+                 console.error('Co-stream WebSocket error:', error);
+               });
+
+             } catch (error) {
+               console.error('Error setting up co-stream WebSocket:', error);
+               ws.close();
+             }
+           });
+
+           // Helper function to broadcast to all participants in a session
+           function broadcastToSession(sessionId: string, message: any, excludeUserId?: string) {
+             const sessionConnections = global.coStreamConnections?.get(sessionId);
+             if (!sessionConnections) return;
+
+             for (const [userId, connection] of sessionConnections.entries()) {
+               if (userId !== excludeUserId && connection.ws.readyState === 1) { // 1 = OPEN
+                 try {
+                   connection.ws.send(JSON.stringify(message));
+                 } catch (error) {
+                   console.error('Error broadcasting to participant:', error);
+                 }
+               }
+             }
+           }
+         }
+
+  // NEW USER SEARCH ROUTE - COMPLETELY INDEPENDENT
+  app.use("/api/user-search", userSearchRoutes);
+
+  // Admin users route
+  app.use("/api/admin", adminUsersRoutes);
 
   // Image thumbnail generation route for mobile compatibility
   app.post('/api/avatars/generate-thumbnail', isAuthenticated, uploadMain.single('image'), async (req: any, res) => {
@@ -1796,7 +1941,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return false;
           });
           
-          console.log(`🔍 Found ${userTempFiles.length} temporary avatar files:`, userTempFiles);
+          // console.log(`🔍 Found ${userTempFiles.length} temporary avatar files:`, userTempFiles);
           
           for (const file of userTempFiles) {
             const tempId = file.replace('.glb', '');
@@ -1865,7 +2010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Combine database and temporary avatars
       const allAvatars = [...tempAvatars, ...dbAvatars];
       
-      console.log(`📋 Returning ${allAvatars.length} avatars (${tempAvatars.length} temp, ${dbAvatars.length} saved)`);
+      // console.log(`📋 Returning ${allAvatars.length} avatars (${tempAvatars.length} temp, ${dbAvatars.length} saved)`);
       res.json(allAvatars);
     } catch (error: any) {
       console.error("Error fetching avatars:", error);
@@ -1873,30 +2018,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User authentication middleware with Supabase (simplified)
+  // Avatar categories endpoint
+  app.get("/api/avatars/categories", async (req: any, res: any) => {
+    try {
+      // Return empty array for now - can be expanded later
+      res.json([]);
+    } catch (error: any) {
+      console.error('Avatar categories error:', error);
+      res.status(500).json({ error: 'Failed to fetch avatar categories' });
+    }
+  });
+
+  // Avatar presets endpoint
+  app.get("/api/avatars/presets", async (req: any, res: any) => {
+    try {
+      // Return empty array for now - can be expanded later
+      res.json([]);
+    } catch (error: any) {
+      console.error('Avatar presets error:', error);
+      res.status(500).json({ error: 'Failed to fetch avatar presets' });
+    }
+  });
+
+  // User authentication middleware with Supabase
   async function isAuthenticated(req: any, res: any, next: any) {
     try {
-      console.log("📥 REQUEST:", req.method, req.path);
-      console.log("📥 Headers:", {
-        'content-type': req.headers['content-type'],
-        authorization: req.headers.authorization ? 'Bearer [present]' : 'missing',
-        'content-length': req.headers['content-length']
-      });
-      
-      // Skip authentication for avatar endpoints for testing
-      if (req.path === '/api/avatars' ||
-          req.path === '/api/avatars/upload-glb' || 
-          req.path === '/api/avatars/save' || 
-          req.path === '/api/avatars/2d-to-3d' ||
-          req.path.startsWith('/api/avatars/auto-rig')) {
-        console.log("🔓 Bypassing auth for avatar endpoint:", req.path);
-        req.supabaseUser = { 
-          id: '8b97c730-73bf-4073-82dc-b8ef84e26009',
-          user_metadata: { plan: 'goat' }
-        };
-        req.user = req.supabaseUser;
-        return next();
-      }
+      console.log("🔐 Authenticating request:", req.method, req.path);
       
       // Extract token from Authorization header
       const authHeader = req.headers.authorization;
@@ -3031,5 +3178,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Don't crash the server, but log the error
   }
   
+  // Add missing avatar endpoint
+  app.get("/api/avatar/:userId", async (req: any, res: Response) => {
+    try {
+      const { userId } = req.params;
+      
+      // Return a placeholder avatar for now
+      res.json({
+        id: userId,
+        name: 'User Avatar',
+        thumbnail_url: '/api/placeholder/200/200',
+        preview_url: '/api/placeholder/400/400'
+      });
+    } catch (error) {
+      console.error('Get avatar error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Add missing RTMP sources endpoint
+  app.get("/api/rtmp-sources", async (req: any, res: Response) => {
+    try {
+      // Return empty array for now
+      res.json([]);
+    } catch (error) {
+      console.error('Get RTMP sources error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   return httpServer;
 }
+

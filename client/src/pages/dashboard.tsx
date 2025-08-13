@@ -33,7 +33,7 @@ export default function Dashboard() {
   // Fetch user's avatars from database only once
   const { data: userAvatars = [] } = useQuery({
     queryKey: ["/api/avatars"],
-    enabled: !!user && !isLoading,
+    enabled: false, // Disable avatar query to prevent spam
   });
 
   // Fetch user's streaming sessions for analytics only once

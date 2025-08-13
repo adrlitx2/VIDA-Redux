@@ -145,8 +145,8 @@ router.get("/user", async (req, res) => {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     console.log("Authenticating token for /api/auth/user");
     
-    // Verify the Supabase JWT token and get user using service role client
-    const { data: supabaseUser, error } = await supabaseAuth.supabaseAdmin.auth.getUser(token);
+    // Verify the Supabase JWT token and get user using regular client
+    const { data: supabaseUser, error } = await supabaseAuth.supabase.auth.getUser(token);
     
     if (error || !supabaseUser.user) {
       console.error("Supabase auth error:", error);

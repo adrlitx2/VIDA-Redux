@@ -50,31 +50,18 @@ export default function RealAdminDashboard() {
   const isAdmin = userRoles.includes("admin") || userRoles.includes("superadmin");
   const isSuperAdmin = userRoles.includes("superadmin");
 
-  // Fetch real users from Supabase database (always call hooks)
+  // Fetch real users from backend API
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ["real-admin-users"],
     queryFn: async () => {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+      const response = await fetch('/api/admin/users');
       
-      if (!supabaseServiceKey) {
-        throw new Error('Service role key required for admin operations');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
       }
       
-      const adminSupabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      const { data, error } = await adminSupabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) {
-        console.error('Error fetching users:', error);
-        throw new Error(error.message);
-      }
-      
-      console.log('Fetched real users from database:', data);
+      const data = await response.json();
+      console.log('Fetched real users from API:', data);
       return data || [];
     }
   });

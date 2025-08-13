@@ -70,16 +70,25 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
     };
   }, []);
 
-  // Complete rendering pipeline
-  const renderFrame = useCallback(() => {
+  // Background rendering - only when background changes
+  const renderBackground = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Only clear and re-render if background has changed
+    const currentBackground = `${backgroundType}-${selectedVirtualBg}-${solidColor}`;
+    if (canvas.dataset.currentBackground === currentBackground) {
+      return; // Background hasn't changed, skip rendering
+    }
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Mark current background
+    canvas.dataset.currentBackground = currentBackground;
 
     // 1. BACKGROUND LAYER
     let backgroundRendered = false;
@@ -87,7 +96,6 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
     if (backgroundType === 'virtual' && selectedVirtualBg) {
       // Use shared background images from parent component
       const img = backgroundImages[selectedVirtualBg];
-      console.log(`🔍 RTMP Frame: selectedVirtualBg=${selectedVirtualBg}, img exists=${!!img}, complete=${img?.complete}, naturalHeight=${img?.naturalHeight}, backgroundsLoaded=${backgroundsLoaded}`);
       
       if (img && img.complete && img.naturalHeight > 0 && img.width > 0 && backgroundsLoaded) {
         // Calculate proper scaling to fill canvas while maintaining aspect ratio
@@ -103,10 +111,8 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
         // Draw scaled and centered background
         ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
         backgroundRendered = true;
-        console.log(`✅ RTMP Frame: Successfully rendered background ${selectedVirtualBg} (${scaledWidth}x${scaledHeight})`);
       } else {
         // Don't render anything if background isn't ready - this prevents flickering
-        console.log(`⚠️ RTMP Frame: Background ${selectedVirtualBg} not ready, skipping frame`);
         return; // Skip this frame entirely to prevent flickering
       }
     } else if (backgroundType === 'color' && solidColor) {
@@ -122,7 +128,6 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         ctx.filter = 'none';
         backgroundRendered = true;
-        console.log(`🎨 Rendered blurred camera background`);
       }
     }
       
@@ -160,8 +165,6 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
         backgroundRendered = true;
       }
     }
-
-    // No overlay indicators needed for RTMP stream
 
     // Default background - only when no specific background is selected
     if (!backgroundRendered) {
@@ -303,8 +306,22 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
     onFrameCapture
   ]);
 
-  // Animation loop with 30 FPS rate limiting for X.com compatibility
+  // Complete frame rendering - only when needed for streaming
+  const renderFrame = useCallback(() => {
+    // Only render background if it hasn't been rendered yet
+    renderBackground();
+    
+    // Add any dynamic elements here if needed (like avatars, overlays, etc.)
+    // For now, we just render the background once and keep it static
+  }, [renderBackground]);
+
+  // Animation loop - only run when streaming or when background changes
   useEffect(() => {
+    // Only start animation if we're streaming or if background has changed
+    if (!onFrameCapture && !backgroundType) {
+      return;
+    }
+
     let lastFrameTime = 0;
     const targetFPS = 30;
     const frameInterval = 1000 / targetFPS; // 33.33ms per frame
@@ -324,29 +341,27 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [renderFrame]);
+  }, [renderFrame, onFrameCapture, backgroundType]);
 
   // Setup frame interval for RTMP capture - only when backgrounds are loaded
   useEffect(() => {
     if (onFrameCapture && canvasRef.current && imagesLoaded) {
       console.log('🎬 Starting RTMP frame capture with loaded backgrounds');
       
+      // Initial background render
+      renderBackground();
+      
       // Wait a moment for canvas to render before starting capture
       const startCapture = () => {
         frameIntervalRef.current = setInterval(() => {
           if (canvasRef.current) {
-            // Force a render before capture to ensure fresh content
-            renderFrame();
-            
-            // Verify canvas has content before sending
+            // Only capture if canvas has content (background has been rendered)
             const ctx = canvasRef.current.getContext('2d');
             const imageData = ctx?.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
             const hasContent = imageData && Array.from(imageData.data).some(pixel => pixel !== 0);
             
             if (hasContent) {
               onFrameCapture(canvasRef.current);
-            } else {
-              console.warn('⚠️ Canvas has no content, skipping frame');
             }
           }
         }, 1000 / 30);
@@ -362,7 +377,14 @@ export const StreamingCanvas: React.FC<StreamingCanvasProps> = ({
         }
       };
     }
-  }, [onFrameCapture, imagesLoaded, renderFrame]);
+  }, [onFrameCapture, imagesLoaded, renderBackground]);
+
+  // Re-render background when background settings change
+  useEffect(() => {
+    if (canvasRef.current && imagesLoaded) {
+      renderBackground();
+    }
+  }, [backgroundType, selectedVirtualBg, solidColor, imagesLoaded, renderBackground]);
 
   return (
     <div className="relative w-full h-full">

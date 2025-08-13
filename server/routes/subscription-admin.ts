@@ -12,8 +12,8 @@ const isAuthenticated = async (req: any, res: any, next: any) => {
     
     const { createClient } = await import('@supabase/supabase-js');
     const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.VITE_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role key for admin
     );
     
     const { data, error } = await supabaseAdmin.auth.getUser(token);

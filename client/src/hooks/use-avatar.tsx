@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { useLocation } from "wouter";
 import { apiRequest } from "../lib/queryClient";
 import { useAuth } from "./use-auth";
@@ -35,7 +35,6 @@ interface AvatarContextType {
   selectAvatar: (avatarId: number) => void;
   previewAvatar: (avatarId: number) => void;
   deleteAvatar: (avatarId: number) => Promise<boolean>;
-  refreshAvatars: () => Promise<void>;
   startStreaming: () => void;
   stopStreaming: () => void;
 }
@@ -45,25 +44,15 @@ const AvatarContext = createContext<AvatarContextType | undefined>(undefined);
 export function AvatarProvider({ children }: { children: ReactNode }) {
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // No longer true by default
   const [isStreaming, setIsStreaming] = useState(false);
   const [avatarImage, setAvatarImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { startAutoRigging, completeAutoRigging } = useAutoRigging();
 
-  // Fetch user avatars on component mount
-  useEffect(() => {
-    if (!isAuthLoading && user) {
-      refreshAvatars();
-    } else if (!isAuthLoading && !user) {
-      setAvatars([]);
-      setIsLoading(false);
-    }
-  }, [user, isAuthLoading]);
-  
   // Function to create a 3D avatar from a 2D image
   const createAvatarFrom2D = async (imageFile: File, name: string = `Avatar ${Date.now()}`): Promise<Avatar | null> => {
     if (!user) {
@@ -414,60 +403,6 @@ export function AvatarProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Function to refresh avatars
-  const refreshAvatars = async (): Promise<void> => {
-    if (!user) return;
-    
-    // Prevent avatar refresh during active generation
-    if (isGenerating) {
-      console.log('⚠️ Avatar refresh skipped - generation in progress');
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      console.log('🔄 Refreshing avatars for user:', user.id);
-      
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      
-      if (!token) {
-        console.error('❌ No auth token available for avatar refresh');
-        return;
-      }
-      
-      const response = await fetch('/api/avatars', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch avatars: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Fetched avatars:', data);
-      setAvatars(data);
-      
-      // If selected avatar is now deleted, select a new one
-      if (selectedAvatar && !data.find((a: Avatar) => a.id === selectedAvatar.id)) {
-        setSelectedAvatar(data.length > 0 ? data[0] : null);
-      }
-    } catch (error) {
-      console.error("Error refreshing avatars:", error);
-      toast({
-        title: "Failed to load avatars",
-        description: "There was an error loading your avatar collection",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <AvatarContext.Provider
       value={{
@@ -483,7 +418,6 @@ export function AvatarProvider({ children }: { children: ReactNode }) {
         selectAvatar,
         previewAvatar,
         deleteAvatar,
-        refreshAvatars,
         startStreaming,
         stopStreaming,
       }}

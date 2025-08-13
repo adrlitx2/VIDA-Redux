@@ -2,20 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 import { storage } from '../storage';
 import type { Provider } from '@supabase/supabase-js';
 
-// Check for required environment variables
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing required Supabase environment variables');
-}
+// Use the correct Supabase URL and keys
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
+}
 
 // Create Supabase client for public operations
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Create Supabase client with service role for server-side operations
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * Register a new user with email and password

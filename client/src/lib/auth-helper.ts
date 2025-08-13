@@ -62,8 +62,8 @@ export const getCurrentUser = async () => {
 // Get auth headers with Supabase token
 export const getAuthHeaders = (): Record<string, string> => {
   try {
-    // Get the session from localStorage
-    const supabaseSession = localStorage.getItem('sb-ewvbjadosmwgtntdmpog-auth-token');
+    // Get the session from localStorage - use the same key as Supabase client
+    const supabaseSession = localStorage.getItem('vida3-auth');
     if (supabaseSession) {
       const session = JSON.parse(supabaseSession);
       if (session?.access_token) {

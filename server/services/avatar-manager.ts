@@ -19,8 +19,8 @@ import { glbThumbnailGenerator } from './glb-thumbnail-generator';
 import { enhancedGLBRigger } from './enhanced-glb-rigger';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_SUPABASE_ANON_KEY!
 );
 
 interface RiggedModelCache {
@@ -146,7 +146,7 @@ export class AvatarManager {
         throw new Error(`Supabase upload failed: ${supabaseError.message}`);
       }
 
-      const supabaseUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/avatars/${supabaseFileName}`;
+      const supabaseUrl = `${process.env.VITE_SUPABASE_URL}/storage/v1/object/public/avatars/${supabaseFileName}`;
 
       // Upload to IPFS
       let ipfsHash: string | undefined;
@@ -1762,8 +1762,8 @@ export class AvatarManager {
   private async getSupabaseUrl(path: string): Promise<string> {
     // Using imported createClient from top of file
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.VITE_SUPABASE_URL!,
+      process.env.VITE_SUPABASE_ANON_KEY!
     );
 
     const { data } = supabase.storage
