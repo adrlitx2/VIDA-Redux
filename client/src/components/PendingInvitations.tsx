@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { getAuthHeaders } from '@/lib/auth-helper';
 import { Check, X, Clock, Users } from 'lucide-react';
 
 interface Invitation {
@@ -38,12 +39,9 @@ export default function PendingInvitations() {
 
   const fetchInvitations = async () => {
     try {
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch('/api/buddy-system/invitations/pending', {
         headers: {
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          ...(await getAuthHeaders())
         }
       });
 
@@ -68,13 +66,10 @@ export default function PendingInvitations() {
 
   const respondToInvitation = async (invitationId: number, action: 'accept' | 'decline') => {
     try {
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/buddy-system/invitations/${invitationId}/${action}`, {
         method: 'POST',
         headers: {
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          ...(await getAuthHeaders())
         }
       });
 

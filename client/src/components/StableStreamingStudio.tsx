@@ -8,6 +8,7 @@ import ThreeModelViewer from "./ThreeModelViewer";
 // Unified streaming solution - all methods consolidated
 import { useAuth } from "@/hooks/use-auth.tsx";
 import { useSubscription } from "@/hooks/use-subscription.tsx";
+import { getAuthHeaders } from "@/lib/auth-helper";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -202,15 +203,11 @@ export default function StableStreamingStudio() {
     if (!coStreamEnabled) return;
 
     try {
-      // Get auth token from localStorage
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch('/api/buddy-system/co-stream/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({
           sessionName: `${user?.username || 'User'}'s Co-Stream`,
@@ -282,12 +279,9 @@ export default function StableStreamingStudio() {
       // Add a small delay to ensure backend has processed the host participant
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/buddy-system/co-stream/${sessionId}/participants`, {
         headers: {
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          ...(await getAuthHeaders())
         }
       });
 
@@ -542,15 +536,11 @@ export default function StableStreamingStudio() {
     if (!coStreamSession) return;
 
     try {
-      // Get auth token from localStorage
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/buddy-system/co-stream/${coStreamSession.id}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` })
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({
           inviteeId: userId,

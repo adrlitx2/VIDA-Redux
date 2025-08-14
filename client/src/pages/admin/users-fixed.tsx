@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/auth-helper";
 import { Search, Edit3, Shield, ShieldOff, Clock, Users } from "lucide-react";
 
 interface User {
@@ -47,12 +48,9 @@ export default function UsersFixed() {
   // Load users
   const loadUsers = async () => {
     try {
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch('/api/admin/users', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          ...(await getAuthHeaders())
         },
       });
 
@@ -90,14 +88,11 @@ export default function UsersFixed() {
     setIsProcessing(true);
     
     try {
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/admin/users/${editUser.id}/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({
           id: editUser.id,
@@ -133,14 +128,11 @@ export default function UsersFixed() {
     setIsProcessing(true);
     
     try {
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/admin/users/${blockUser.id}/block`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({
           blocked: !blockUser.blocked

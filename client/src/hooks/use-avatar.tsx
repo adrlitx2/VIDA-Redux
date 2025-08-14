@@ -4,6 +4,7 @@ import { apiRequest } from "../lib/queryClient";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
 import { supabase } from "@/lib/supabase";
+import { getAuthHeaders } from "@/lib/auth-helper";
 import { useAutoRigging } from "../App";
 
 type Avatar = {

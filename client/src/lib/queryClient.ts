@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getAuthHeaders } from "./auth-helper";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -16,11 +17,10 @@ export async function apiRequest(
   let headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
   
   try {
-    // Check for Supabase auth token in the correct storage key
-    const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-    const accessToken = authData?.access_token;
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
+    // Get auth headers from helper
+    const authHeaders = await getAuthHeaders();
+    if (authHeaders.Authorization) {
+      headers = { ...headers, ...authHeaders };
       console.log('Auth token found and added to headers');
     } else {
       console.warn('No auth token found in storage');
@@ -101,11 +101,10 @@ export const getQueryFn: <T>(options: {
     let headers: Record<string, string> = {};
     
     try {
-      // Check for Supabase auth token in the correct storage key
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      // Get auth headers from helper
+      const authHeaders = await getAuthHeaders();
+      if (authHeaders.Authorization) {
+        headers = { ...headers, ...authHeaders };
       }
     } catch (error) {
       console.warn('Failed to get auth token from storage:', error);

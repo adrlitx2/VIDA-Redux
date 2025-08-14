@@ -15,6 +15,7 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthHeaders } from '@/lib/auth-helper';
 import ParticipantTile from "./Streaming/ParticipantTile";
 
 interface Participant {
@@ -228,7 +229,7 @@ export default function ParticipantGrid({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({ userId, ...data })
       });

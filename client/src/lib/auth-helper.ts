@@ -37,7 +37,7 @@ export const setUserRole = async (userId: string, role: UserRole): Promise<{ suc
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...getAuthHeaders()
+        ...(await getAuthHeaders())
       },
       body: JSON.stringify({ userId, role })
     });
@@ -60,18 +60,15 @@ export const getCurrentUser = async () => {
 };
 
 // Get auth headers with Supabase token
-export const getAuthHeaders = (): Record<string, string> => {
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
   try {
-    // Get the session from localStorage - use the same key as Supabase client
-    const supabaseSession = localStorage.getItem('vida3-auth');
-    if (supabaseSession) {
-      const session = JSON.parse(supabaseSession);
-      if (session?.access_token) {
-        return { 'Authorization': `Bearer ${session.access_token}` };
-      }
+    // Get the current session from Supabase (always fresh)
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      return { 'Authorization': `Bearer ${session.access_token}` };
     }
   } catch (error) {
-    console.warn('Failed to get auth token from storage:', error);
+    console.warn('Failed to get auth token from Supabase:', error);
   }
   
   return {};

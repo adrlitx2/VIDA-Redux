@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, UserPlus, Users, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthHeaders } from '@/lib/auth-helper';
 
 interface User {
   id: string;
@@ -38,13 +39,9 @@ export default function UserSearch({ onUserSelect, onBuddyRequest, showBuddyActi
 
     setLoading(true);
     try {
-      // Get auth token from localStorage
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/buddy-system/users/search?query=${encodeURIComponent(query)}`, {
         headers: {
-          'Authorization': `Bearer ${accessToken}`
+          ...(await getAuthHeaders())
         }
       });
 
@@ -69,15 +66,11 @@ export default function UserSearch({ onUserSelect, onBuddyRequest, showBuddyActi
   // Send buddy request
   const sendBuddyRequest = async (userId: string) => {
     try {
-      // Get auth token from localStorage
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch('/api/buddies/request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({ recipientId: userId })
       });

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/auth-helper";
 
 interface User {
   id: string;
@@ -56,15 +57,11 @@ export default function UserManagementDialogFixed({
     setIsLoading(true);
     
     try {
-      // Get auth token directly
-      const authData = JSON.parse(localStorage.getItem('vida3-auth') || '{}');
-      const accessToken = authData?.access_token;
-      
       const response = await fetch(`/api/admin/users/${user.id}/update`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          ...(await getAuthHeaders())
         },
         body: JSON.stringify({
           id: user.id,
